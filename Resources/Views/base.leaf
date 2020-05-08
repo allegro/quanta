@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>#get(title)</title>
+    <link rel="stylesheet" href="/styles/normalize.css">
+    <link rel="stylesheet" href="/styles/skeleton.css">
+    <link rel="stylesheet" href="/styles/app.css">
+</head>
+<body>
+    <div class="container">
+        #get(content)
+    </div>
+</body>
+</html>

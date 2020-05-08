@@ -1,0 +1,48 @@
+#set("title") { Quanta image optimization service }
+
+#set("content") {
+    <div class="row">
+        <div class="three columns">
+            <img class="logo" src="/images/quanta.png" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="twelve columns">
+            <p>Quanta is the image optimization service.</p>
+            <form id="optimizeForm">
+                <div class="row">
+                    <div class="four columns">
+                        <label for="originalFile">Image to optimize (JPG)</label>
+                        <input type="file" name="fileBytes" id="originalFile" required onchange="loadOriginalFile()">
+                    </div>
+                    <div class="two columns">
+                        <label for="qualityField">Quality: <span id="qualityValue">75</span></label>
+                        <input type="range" name="quality" id="qualityField" value="75" min="1" max="100" step="1" onchange="optimize(event)" oninput="document.getElementById('qualityValue').innerText = this.value; ">
+                    </div>
+                    <div class="six columns">
+                        <a class="button" id="download" style="display: none">Save optimized image</a>
+                    </div>
+                </div>
+            </form>
+            <div class="twelve columns" id="errorWrapper"></div>
+            <div class="slide-comparison" id="slideComparison" style="display: none">
+                <img src="" id="originalImage">
+                <div class="resized">
+                    <img src="" id="optimizedImage">
+                </div>
+                <div class="divider">
+                    <span id="optimizeDetails">
+                        <span id="optimizedSize"></span>
+                        <span id="originalSize"></span>
+                    </span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <script src="/js/slider.min.js"></script>
+    <script src="/js/demo.js"></script>
+
+}
+
+#embed("base")
