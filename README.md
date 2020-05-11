@@ -1,3 +1,5 @@
+#test
+
 # Quanta - image optimization service
 
 Quanta is a microservice for JPEG image optimizations. It similar to other online tools like jpegmini.com, tinypng.com or compressor.io but it is an in-house solution and based on a proven solution like MozJPEG.
