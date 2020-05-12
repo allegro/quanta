@@ -9,6 +9,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: brew install mozjpeg
+    - run: make test
+
   vapor_xenial:
     container: 
       image: swift:5.2.3
@@ -17,6 +19,7 @@ jobs:
     - uses: actions/checkout@v2
     - run: ./install-linux-dependencies.sh
     - run: make test
+
   vapor_bionic:
     container: 
       image: swift:5.2.3
