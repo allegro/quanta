@@ -36,3 +36,4 @@ format:
 
 lint:
 	swiftformat --lint --verbose --disable redundantSelf ./Sources
+
