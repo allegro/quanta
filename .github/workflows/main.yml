@@ -8,7 +8,7 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_11.4_beta.app/Contents/Developer
     steps:
     - uses: actions/checkout@v2
-    - run: brew install mozjpeg
+    - run: brew install mozjpeg openssl 
     - run: make test
 
   vapor_xenial:
