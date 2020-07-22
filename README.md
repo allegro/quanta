@@ -2,7 +2,7 @@
 
 ![test](https://github.com/allegro/quanta/workflows/test/badge.svg)
 
-Quanta is a microservice for JPEG image optimizations. It similar to other online tools like jpegmini.com, tinypng.com or compressor.io but it is an in-house solution and based on a proven solution like MozJPEG.
+Quanta is a microservice for JPEG image optimizations built using Swift programming language. Itis  similar to other online tools like jpegmini.com, tinypng.com or compressor.io but it is an in-house solution and based on a proven solution like MozJPEG.
 
 In comparison with other mozjpeg wrappers, this software has low memory overhead and fast performance, which can help with horizontal scalling with large number of instances and simulatenous requests.
 
@@ -11,7 +11,6 @@ We used [Swift](https://swift.org) as a main language and [Vapor 3](https://docs
 
  - [mozjpeg](https://github.com/mozilla/mozjpeg)<br>
 
-Quanta can easily be integrated with other image optimization tools like [pngquant](https://pngquant.org/) but couldn't be included into Quanta due to GPL license.
 
 # Requirements
 Quanta requires MozJPEG to be installed on host.
@@ -19,12 +18,14 @@ Quanta requires MozJPEG to be installed on host.
 ## MacOS
 Run `brew install mozjpeg`.
 
-## Sources
-To build MozJPEG using it's sources, follow official documentation in repository: https://github.com/mozilla/mozjpeg
+## Linux
+
+You can use provided script `install-linux-dependencies.sh` to compile and install mozjpeg. Also, follow official documentation in repository: https://github.com/mozilla/mozjpeg
 
 
 # Getting started
-This is a guide on optimizing your image in Quanta. In sections below, you will know how to compress JPEG file by:
+
+There are multiple ways to use Quanta to recompress JPEG file: 
 
  - REST(-ish) API
  - proxy method
@@ -34,7 +35,7 @@ This is a guide on optimizing your image in Quanta. In sections below, you will 
 Quanta provides REST API. This simple endpoint optimizes image by normal HTTP request and returns image (JPEG).
 
 !!! note
-    Quanta always preserves original format. If you send JPG - you will get (optimized) JPG.
+    Quanta always preserves original format. If you send JPEG - you will get (optimized) JPEG.
 
 ### Usage
 
