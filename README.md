@@ -2,12 +2,12 @@
 
 ![test](https://github.com/allegro/quanta/workflows/test/badge.svg)
 
-Quanta is a microservice for JPEG image optimizations built using Swift programming language. Itis  similar to other online tools like jpegmini.com, tinypng.com or compressor.io but it is an in-house solution and based on a proven solution like MozJPEG.
+Quanta is a microservice for JPEG image optimizations built using Swift programming language. It is  similar to other online tools like jpegmini.com, tinypng.com or compressor.io but it is an in-house solution and based on a proven solution like MozJPEG.
 
-In comparison with other mozjpeg wrappers, this software has low memory overhead and fast performance, which can help with horizontal scalling with large number of instances and simulatenous requests.
+Compared with other mozjpeg wrappers, this software has low memory overhead and fast performance, which can help with horizontal scaling with a large number of instances and simultaneous requests.
 
 ## More information
-We used [Swift](https://swift.org) as a main language and [Vapor 3](https://docs.vapor.codes/3.0/) to handle your requests. Check also awesome libraries without which quanta can't work:
+We used [Swift](https://swift.org) and [Vapor 3](https://docs.vapor.codes/3.0/) to handle HTTP requests. Check also excellent libraries without which quanta can't work:
 
  - [mozjpeg](https://github.com/mozilla/mozjpeg)<br>
 
@@ -20,12 +20,12 @@ Run `brew install mozjpeg`.
 
 ## Linux
 
-You can use provided script `install-linux-dependencies.sh` to compile and install mozjpeg. Also, follow official documentation in repository: https://github.com/mozilla/mozjpeg
+You can use the provided script `install-linux-dependencies.sh` to compile and install mozjpeg. Also, follow official documentation in the repository: https://github.com/mozilla/mozjpeg
 
 
 # Getting started
 
-There are multiple ways to use Quanta to recompress JPEG file: 
+There are multiple ways to use Quanta to recompress the JPEG file: 
 
  - REST(-ish) API
  - proxy method
