@@ -2,15 +2,6 @@ name: test
 on:
 - pull_request
 jobs:
-  vapor_macos:
-    runs-on: macos-latest
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_11.4_beta.app/Contents/Developer
-    steps:
-    - uses: actions/checkout@v2
-    - run: brew install mozjpeg libressl pkg-config
-    - run: make test
-
   vapor_xenial:
     container: 
       image: swift:5.2.3
