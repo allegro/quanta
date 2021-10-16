@@ -18,8 +18,8 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_13.0.app/Contents/Developer
     steps:
       - uses: actions/checkout@v2
-      - run: brew tap vi4m/repo
-      - run: brew install mozjpeg@3.3 libressl pkg-config
+      - run: brew install libressl pkg-config
+      - run: brew install --build-from-source ./mozjpeg@3.3.rb
       - run: make test
 
   vapor_xenial:
