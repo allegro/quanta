@@ -9,7 +9,7 @@ Compared with other mozjpeg wrappers, this software has low memory overhead and 
 ## More information
 We used [Swift](https://swift.org) and [Vapor 3](https://docs.vapor.codes/3.0/) to handle HTTP requests. Check also excellent libraries without which quanta can't work:
 
- - [mozjpeg](https://github.com/mozilla/mozjpeg)<br>
+ - [mozjpeg](https://github.com/mozilla/mozjpeg)
 
 
 # Requirements
