@@ -10,8 +10,8 @@ ifeq ($(UNAME), Linux)
 	CFLAGS = -Xcc -DNDEBUG -Xcc -I${PREFIX}opt/mozjpeg/include
 else
 	PREFIX=/usr/local/
-	LDFLAGS = -Xlinker -lz -Xlinker -ljpeg -Xlinker -lturbojpeg -Xlinker -L${PREFIX}opt/mozjpeg/lib
-	CFLAGS = -Xcc -DNDEBUG -Xcc -I${PREFIX}opt/mozjpeg/include
+	LDFLAGS = -Xlinker -lz -Xlinker -ljpeg -Xlinker -lturbojpeg -Xlinker -L${PREFIX}opt/mozjpeg@3.3/lib
+	CFLAGS = -Xcc -DNDEBUG -Xcc -I${PREFIX}opt/mozjpeg@3.3/include
 endif
 
 update:
