@@ -12,6 +12,16 @@ on:
       - created
 
 jobs:
+  vapor_macos:
+    runs-on: macos-11
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_13.0.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v2
+      - run: brew tap vi4m/repo
+      - run: brew install mozjpeg@3.3 libressl pkg-config
+      - run: make test
+
   vapor_xenial:
     container:
       image: swift:5.5.0-xenial
