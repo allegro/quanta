@@ -22,6 +22,9 @@ Run `brew install mozjpeg`.
 
 You can use the provided script `install-linux-dependencies.sh` to compile and install mozjpeg. Also, follow official documentation in the repository: https://github.com/mozilla/mozjpeg
 
+## Installation
+Run `make` to compile the software. \
+Go to `.build/release/` directory and run `./quanta`.
 
 # Getting started
 
@@ -40,8 +43,9 @@ Quanta provides REST API. This simple endpoint optimizes image by normal HTTP re
 ### Usage
 
     $ curl -x POST https://quanta.com/optimize/jpg/ -H "Content-Type" \
-        --form file=@/tmp/file_to_optimize.jpg
+        --form fileBytes=@/tmp/file_to_optimize.jpg
         --form quality=75
+        --output /tmp/optimized_file.jpg
 
 According to the table below, as a result, you can get binary data or JSON struct with an error message.
 
