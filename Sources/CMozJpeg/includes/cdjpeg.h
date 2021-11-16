@@ -15,6 +15,8 @@
 
 #define JPEG_CJPEG_DJPEG        /* define proper options in jconfig.h */
 #define JPEG_INTERNAL_OPTIONS   /* cjpeg.c,djpeg.c need to see xxx_SUPPORTED */
+#ifndef cdjpeg_h
+#define cdjpeg_h
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jerror.h"             /* get library error codes too */
@@ -162,3 +164,5 @@ EXTERN(FILE *) write_stdout (void);
 #ifndef EXIT_WARNING
 #define EXIT_WARNING  2
 #endif
+
+#endif /* cdjpeg_h */
