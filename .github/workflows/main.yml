@@ -4,38 +4,37 @@ on:
   push:
     branches:
       - master
+      - swift6-upgrade
   pull_request:
-    branches:
-      - master
   release:
     types:
       - created
 
 jobs:
   vapor_macos:
-    runs-on: macos-11
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_13.0.app/Contents/Developer
+    runs-on: macos-15
     steps:
-      - uses: actions/checkout@v2
-      - run: brew install libressl pkg-config
-      - run: brew install --build-from-source ./mozjpeg@3.3.rb
-      - run: make test
+      - uses: actions/checkout@v4
+      - name: Show toolchain
+        run: swift --version
+      - name: Install mozjpeg
+        run: brew install mozjpeg pkg-config
+      - name: Test
+        run: make test
 
-  vapor_xenial:
-    container:
-      image: swift:5.5.0-xenial
+  vapor_linux:
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - run: ./install-linux-dependencies.sh
-    - run: make test
-
-  vapor_bionic:
+    strategy:
+      fail-fast: false
+      matrix:
+        swift_image:
+          - swift:6.0-jammy
+          - swift:6.0-noble
     container:
-      image: swift:5.5.0-bionic
-    runs-on: ubuntu-latest
+      image: ${{ matrix.swift_image }}
     steps:
-    - uses: actions/checkout@v2
-    - run: ./install-linux-dependencies.sh
-    - run: make test
+      - uses: actions/checkout@v4
+      - name: Install native deps
+        run: ./install-linux-dependencies.sh
+      - name: Test
+        run: make test

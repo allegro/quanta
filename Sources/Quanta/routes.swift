@@ -1,8 +1,8 @@
 import Vapor
 
-public func routes(_ router: Router) throws {
+public func routes(_ app: Application) throws {
     let optimizeService = OptimizeService()
     let homeController = HomeController()
-    try router.register(collection: homeController)
-    try router.register(collection: OptimizeController(optimizeService: optimizeService))
+    try app.register(collection: homeController)
+    try app.register(collection: OptimizeController(optimizeService: optimizeService))
 }
