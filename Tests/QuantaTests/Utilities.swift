@@ -1,55 +1,45 @@
 import Foundation
 import XCTest
-import Multipart
-
 import Vapor
+import XCTVapor
 @testable import Quanta
-
 
 public func getFixture(fileNamePath: String) -> Data {
     let fixturesPath = ProcessInfo.processInfo.environment["TEST_FIXTURES_DIR"] ?? "./Resources/Samples/"
-
     let finalURL = URL(fileURLWithPath: "\(fixturesPath)/\(fileNamePath)")
-    guard let file = try? Data.init(contentsOf: finalURL) else {
+    guard let file = try? Data(contentsOf: finalURL) else {
         fatalError("Cannot open: \(finalURL.absoluteString)")
     }
     return file
 }
 
 public enum CompressionType: String {
-    case jpg = "/optimize/jpg/"
-    case demo = "/demo/optimize/"
+    case jpg = "/optimize/jpg"
+    case demo = "/demo/optimize"
 }
 
-public func makeCompressRequest(for type: CompressionType, quality: Int, fixtureName: String) throws -> HTTPRequest {
-    let file = getFixture(fileNamePath: fixtureName)
-    let optimizeRequest = OptimizeRequestUnvalidated(fileBytes: file, quality: quality)
-    let requestBody = try FormDataEncoder().encode(optimizeRequest, boundary: "TEST")
-    let headers = HTTPHeaders([("Content-Type", "multipart/form-data; boundary=TEST")])
-    return HTTPRequest(method: .POST, url: type.rawValue, headers: headers, body: requestBody)
-}
-
-class TestCase: XCTestCase {
-    /// Share application instance between tests
-    static let _app = try! Application.testable(args: ["serve", "-p", "8888"])
-    var app: Application {
-        get {
-            return TestCase._app
-        }
+/// Build a multipart/form-data body for the given fixture file and quality.
+public func makeMultipartBody(quality: Int?, fileBytes: Data?, boundary: String = "TEST") -> (headers: HTTPHeaders, body: ByteBuffer) {
+    var body = ""
+    if let q = quality {
+        body += "--\(boundary)\r\n"
+        body += "Content-Disposition: form-data; name=\"quality\"\r\n\r\n"
+        body += "\(q)\r\n"
     }
-
-    override func setUp() {
-        do {
-            try app.asyncRun().wait()
-        } catch {
-            fatalError("Failed to launch server.")
-        }
-
+    var buffer = ByteBufferAllocator().buffer(capacity: 0)
+    buffer.writeString(body)
+    if let fileBytes = fileBytes {
+        var filePart = "--\(boundary)\r\n"
+        filePart += "Content-Disposition: form-data; name=\"fileBytes\"; filename=\"file.bin\"\r\n"
+        filePart += "Content-Type: application/octet-stream\r\n\r\n"
+        buffer.writeString(filePart)
+        buffer.writeBytes(fileBytes)
+        buffer.writeString("\r\n")
     }
-
-    override func tearDown() {
-        try? app.runningServer?.close().wait()
-    }
+    buffer.writeString("--\(boundary)--\r\n")
+    var headers = HTTPHeaders()
+    headers.add(name: "Content-Type", value: "multipart/form-data; boundary=\(boundary)")
+    return (headers, buffer)
 }
 
 struct ErrorResponse: Content {

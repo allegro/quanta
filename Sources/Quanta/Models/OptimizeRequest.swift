@@ -26,24 +26,20 @@ extension OptimizeRequestUnvalidated: Content {
 
         self.init(fileBytes: fileBytes, quality: quality)
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(fileBytes, forKey: .fileBytes)
+        try container.encode(quality, forKey: .quality)
+    }
 }
 
 // MARK: - Validatable conformance
 
 extension OptimizeRequestUnvalidated: Validatable {
-    static func validations() throws -> Validations<OptimizeRequestUnvalidated> {
-        var validations = Validations(OptimizeRequestUnvalidated.self)
-        validations.add(\.quality, at: ["quality"], "invalid value") { quality throws in
-            if !(1 ... 100).contains(quality) {
-                throw BasicValidationError("is incorrect, must be between 1 and 100 not \(quality)")
-            }
-        }
-        validations.add(\.imageFormat, at: ["imageFormat"], "invalid format") { imageFormat throws in
-            guard imageFormat != nil else {
-                throw BasicValidationError("is not supported")
-            }
-        }
-        return validations
+    static func validations(_ validations: inout Validations) {
+        validations.add("quality", as: Int.self, is: .range(1...100), required: true)
+        validations.add("fileBytes", as: Data.self, required: true)
     }
 }
 
@@ -52,9 +48,18 @@ struct OptimizeRequest {
     let quality: Int
     let imageFormat: ImageFormat
 
-    init(request: OptimizeRequestUnvalidated) {
+    init(request: OptimizeRequestUnvalidated) throws {
+        guard let format = request.imageFormat else {
+            throw Abort(.badRequest, reason: "Unsupported image format")
+        }
         self.fileBytes = request.fileBytes
         self.quality = request.quality
-        self.imageFormat = request.imageFormat!
+        self.imageFormat = format
+    }
+
+    init(fileBytes: Data, quality: Int, imageFormat: ImageFormat) {
+        self.fileBytes = fileBytes
+        self.quality = quality
+        self.imageFormat = imageFormat
     }
 }

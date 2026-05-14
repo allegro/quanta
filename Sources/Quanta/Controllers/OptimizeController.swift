@@ -2,7 +2,7 @@ import Foundation
 import SwiftBoxLogging
 import Vapor
 
-fileprivate var logger = Logging.make(#file)
+private let logger = Logging.make(#file)
 
 struct ProxyRequest: Content {
     let quality: Int
@@ -16,33 +16,32 @@ struct DemoResponse: Content {
     let format: ImageFormat
 }
 
-final class OptimizeController {
+final class OptimizeController: Sendable {
     private let optimizeService: OptimizeService
 
     init(optimizeService: OptimizeService) {
         self.optimizeService = optimizeService
     }
 
-    private func decodePayload<T: Content>(
-        responseType _: T.Type,
-        req: Request
-    ) throws -> Future<T> {
+    private func decodePayload<T: Content>(_ type: T.Type, req: Request) throws -> T {
         logOnReceive(request: req)
-        return try req.content.decode(T.self).map { request in
-            request
-        }.catchMap { error in
-            if let multipartError = error as? MultipartError {
-                logger.warning("Bad request \(multipartError)")
-                throw Abort(.badRequest, reason: multipartError.reason)
-            } else {
-                logger.error("Unhandled error \(error)")
-                throw Abort(.internalServerError, reason: "Internal error")
-            }
+        do {
+            return try req.content.decode(T.self)
+        } catch let error as Vapor.AbortError {
+            throw error
+        } catch {
+            logger.warning("Bad request \(error)")
+            throw Abort(.badRequest, reason: "\(error)")
         }
     }
 
-    private func optimizeImage(for optimizeRequest: OptimizeRequestUnvalidated, rawRequest _: Request) throws -> OptimizeResult {
-        try optimizeRequest.validate()
+    private func optimizeImage(for optimizeRequest: OptimizeRequestUnvalidated) throws -> OptimizeResult {
+        guard optimizeRequest.imageFormat != nil else {
+            throw Abort(.badRequest, reason: "Unsupported or missing image format")
+        }
+        guard (1...100).contains(optimizeRequest.quality) else {
+            throw Abort(.badRequest, reason: "Quality must be between 1 and 100")
+        }
         do {
             return try self.optimizeService.optimize(for: OptimizeRequest(request: optimizeRequest))
         } catch let error as OptimizeServiceError {
@@ -54,59 +53,51 @@ final class OptimizeController {
 
     // MARK: - Endpoints
 
-    func demoEndpoint(req: Request) throws -> Future<DemoResponse> {
-        return try self.decodePayload(responseType: OptimizeRequestUnvalidated.self, req: req).map { request -> DemoResponse in
-            let optimizationResult = try self.optimizeImage(for: request, rawRequest: req)
-            return DemoResponse(
-                encodedImageData: optimizationResult.fileBytes,
-                optimizedSize: optimizationResult.afterSize,
-                originalSize: optimizationResult.beforeSize,
-                format: optimizationResult.imageFormat
-            )
-        }
+    func demoEndpoint(req: Request) async throws -> DemoResponse {
+        let payload = try decodePayload(OptimizeRequestUnvalidated.self, req: req)
+        let result = try optimizeImage(for: payload)
+        return DemoResponse(
+            encodedImageData: result.fileBytes,
+            optimizedSize: result.afterSize,
+            originalSize: result.beforeSize,
+            format: result.imageFormat
+        )
     }
 
-    func proxyEndpoint(req: Request) throws -> Future<HTTPResponse> {
+    func proxyEndpoint(req: Request) async throws -> Response {
         let query = try req.query.decode(ProxyRequest.self)
-        return try req.client().get(query.url).map(to: Data.self) { response -> Data in
-            if response.http.status == HTTPResponseStatus.ok {
-                if let data = response.http.body.data {
-                    return data
-                }
-            }
+        let clientResponse = try await req.client.get(URI(string: query.url))
+        guard clientResponse.status == .ok, let buffer = clientResponse.body, let data = buffer.getData(at: 0, length: buffer.readableBytes) else {
             throw Abort(.badRequest, reason: "Invalid URL")
-        }.map { data -> HTTPResponse in
-            let result = try self.optimizeImage(for: OptimizeRequestUnvalidated(fileBytes: data, quality: query.quality), rawRequest: req)
-            return result.httpResponse
         }
+        let result = try optimizeImage(for: OptimizeRequestUnvalidated(fileBytes: data, quality: query.quality))
+        return result.httpResponse
     }
 
-    func optimizeEndpoint(req: Request) throws -> Future<HTTPResponse> {
-        return try self.decodePayload(responseType: OptimizeRequestUnvalidated.self, req: req).map { request -> HTTPResponse in
-            let result = try self.optimizeImage(for: request, rawRequest: req)
-            return result.httpResponse
-        }
+    func optimizeEndpoint(req: Request) async throws -> Response {
+        let payload = try decodePayload(OptimizeRequestUnvalidated.self, req: req)
+        let result = try optimizeImage(for: payload)
+        return result.httpResponse
     }
 }
 
 // MARK: - Extensions
 
 extension OptimizeResult {
-    var httpResponse: HTTPResponse {
-        let headers = HTTPHeaders([
-            ("X-Quanta-Ratio", String(format: "%.4f", self.ratio)),
-            ("Content-Type", self.imageFormat.rawValue),
-        ])
-        return HTTPResponse(status: .ok, headers: headers, body: Data(self.fileBytes))
+    var httpResponse: Response {
+        var headers = HTTPHeaders()
+        headers.add(name: "X-Quanta-Ratio", value: String(format: "%.4f", self.ratio))
+        headers.add(name: "Content-Type", value: self.imageFormat.rawValue)
+        return Response(status: .ok, headers: headers, body: .init(data: self.fileBytes))
     }
 }
 
 // MARK: - Routes
 
 extension OptimizeController: RouteCollection {
-    func boot(router: Router) throws {
-        router.post("demo", "optimize", use: self.demoEndpoint)
-        router.post("optimize", "jpg", use: self.optimizeEndpoint)
-        router.get("from", use: self.proxyEndpoint)
+    func boot(routes: any RoutesBuilder) throws {
+        routes.post("demo", "optimize", use: self.demoEndpoint)
+        routes.post("optimize", "jpg", use: self.optimizeEndpoint)
+        routes.get("from", use: self.proxyEndpoint)
     }
 }

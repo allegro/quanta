@@ -6,54 +6,44 @@ import SwiftBoxConfig
 import SwiftBoxLogging
 import SwiftBoxMetrics
 
+import Logging
+import Metrics
+
 public protocol QuantaConfigurationProtocol {
     init()
-    func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws
+    func configure(_ app: Application) async throws
+}
+
+public func configure(_ app: Application) async throws {
+    try await QuantaConfiguration().configure(app)
 }
 
 open class QuantaConfiguration: QuantaConfigurationProtocol {
     public required init() {}
 
-    open func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
-        /// Register providers first
-        try bootstrapConfiguration(&config, &env, &services)
+    open func configure(_ app: Application) async throws {
+        try bootstrapConfiguration(app)
 
-        try services.register(LeafProvider())
+        // Use Leaf for rendering views
+        app.views.use(.leaf)
 
-        services.register { _ -> ContentConfig in
-            return ContentConfig.default()
-        }
+        // Configure server
+        app.http.server.configuration.hostname = AppConfig.global.server.host
+        app.http.server.configuration.port = AppConfig.global.server.port
+        app.routes.defaultMaxBodySize = ByteCount(value: AppConfig.global.optimization.maxFilesize.bytes)
 
-        // Set max size for requests
-        services.register(
-            NIOServerConfig.default(
-                hostname: AppConfig.global.server.host,
-                port: AppConfig.global.server.port,
-                maxBodySize: AppConfig.global.optimization.maxFilesize.bytes
-            )
-        )
+        configureLogging(app)
+        configureMetrics(app)
+        configureMiddlewares(app)
 
-        /// Register routes to the router
-        services.register(Router.self) { _ -> EngineRouter in
-            let router = EngineRouter.default()
-            try self.configureRoutes(router: router)
-            return router
-        }
-
-        configureLogging(&config, &env, &services)
-        configureMetrics(&config, &env, &services)
-
-        /// Use Leaf for rendering views
-        config.prefer(LeafRenderer.self, for: ViewRenderer.self)
-
-        configureMiddlewares(&config, &env, &services)
+        try configureRoutes(app)
     }
 
-    open func configureRoutes(router: Router) throws {
-        try routes(router)
+    open func configureRoutes(_ app: Application) throws {
+        try routes(app)
     }
 
-    open func getConfigurationSources(_: inout Config, _ env: inout Environment, _: inout Services) -> [ConfigSource] {
+    open func getConfigurationSources(_ app: Application) -> [ConfigSource] {
         let sources: [ConfigSource] = [
             DictionarySource(dataSource: [
                 "statsd": [
@@ -75,48 +65,43 @@ open class QuantaConfiguration: QuantaConfigurationProtocol {
             CommandLineSource(),
         ]
 
-        // By default vapor throws an error, when there is custom commandline options passed.
-        // Filter custom arguments so Vapor won't fail on start
+        // By default Vapor throws an error when there are custom command line options passed.
+        // Filter custom arguments so Vapor won't fail on start.
         CommandLine.arguments = CommandLineSource.filterArguments(CommandLine.arguments, exclude: true)
-        env.arguments = CommandLineSource.filterArguments(env.arguments, exclude: true)
+        app.environment.arguments = CommandLineSource.filterArguments(app.environment.arguments, exclude: true)
 
         return sources
     }
 
-    open func bootstrapConfiguration(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
-        try AppConfig.bootstrap(from: getConfigurationSources(&config, &env, &services))
+    open func bootstrapConfiguration(_ app: Application) throws {
+        guard AppConfig.configuration == nil else { return }
+        try AppConfig.bootstrap(from: getConfigurationSources(app))
     }
 
-    open func configureLogging(_ config: inout Config, _: inout Environment, _: inout Services) {
-        config.prefer(PrintLogger.self, for: Logger.self)
+    open func configureLogging(_ app: Application) {
         Logging.bootstrap({ _ in PrintLogger() })
     }
 
-    open func configureMetrics(_: inout Config, _: inout Environment, _: inout Services) {
-        if AppConfig.global.statsd.enable {
-            Metrics.bootstrap(
-                try! StatsDMetricsHandler(
-                    baseMetricPath: AppConfig.global.statsd.basePath!,
-                    client: UDPStatsDClient(
-                        config: UDPConnectionConfig(
-                            host: AppConfig.global.statsd.host!,
-                            port: AppConfig.global.statsd.port!
-                        )
-                    )
+    open func configureMetrics(_ app: Application) {
+        guard AppConfig.global.statsd.enable else { return }
+        let basePath = AppConfig.global.statsd.basePath!
+        let host = AppConfig.global.statsd.host!
+        let port = AppConfig.global.statsd.port!
+        let factory = QuantaStatsDMetricsFactory(
+            baseMetricPath: basePath,
+            handlerFactory: { path in
+                StatsDMetricsHandler(
+                    path: path,
+                    client: UDPStatsDClient(config: UDPConnectionConfig(host: host, port: port))
                 )
-            )
-        }
+            }
+        )
+        MetricsSystem.bootstrap(factory)
     }
 
-    open func getMiddlewares(_: inout Config, _: inout Environment, _: inout Services) -> MiddlewareConfig {
-        var middlewares = MiddlewareConfig()
-        middlewares.use(FileMiddleware.self) // Serves files from `Public/` directory
-        middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
-
-        return middlewares
-    }
-
-    open func configureMiddlewares(_ config: inout Config, _ env: inout Environment, _ services: inout Services) {
-        services.register(getMiddlewares(&config, &env, &services))
+    open func configureMiddlewares(_ app: Application) {
+        app.middleware = .init()
+        app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
+        app.middleware.use(ErrorMiddleware.default(environment: app.environment))
     }
 }

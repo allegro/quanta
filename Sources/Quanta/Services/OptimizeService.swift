@@ -1,10 +1,11 @@
 import Foundation
+import Metrics
 import Vapor
 
 import SwiftBoxLogging
 import SwiftBoxMetrics
 
-fileprivate var logger = Logging.make(#file)
+private let logger = Logging.make(#file)
 
 public enum OptimizeServiceError: Swift.Error {
     case BadData(argument: String)
@@ -12,40 +13,57 @@ public enum OptimizeServiceError: Swift.Error {
     case UnknownError
 }
 
-public final class OptimizeService {
-    class func optimizeJpeg(from request: OptimizeRequest) throws -> OptimizeResult {
+final class OptimizeService: Sendable {
+    init() {}
+
+    static func optimizeJpeg(from request: OptimizeRequest) throws -> OptimizeResult {
         let inputImage = request.fileBytes
         let inputImageSize = inputImage.count
 
-        guard let optimizedImage: Data = optimizeWithMozJpeg(jpegData: inputImage, quality: UInt(request.quality), chromaSubsampling: .q11) else {
+        guard let optimizedImage: Data = optimizeWithMozJpeg(
+            jpegData: inputImage,
+            quality: UInt(request.quality),
+            chromaSubsampling: .q11
+        ) else {
             throw OptimizeServiceError.BadData(argument: "Cannot convert input data!")
         }
         let optimizedImageSize = optimizedImage.count
-        return OptimizeResult(fileBytes: optimizedImage, afterSize: optimizedImageSize, beforeSize: inputImageSize, imageFormat: request.imageFormat, quality: request.quality)
+        return OptimizeResult(
+            fileBytes: optimizedImage,
+            afterSize: optimizedImageSize,
+            beforeSize: inputImageSize,
+            imageFormat: request.imageFormat,
+            quality: request.quality
+        )
     }
 
     func optimize(for optimizationRequest: OptimizeRequest) throws -> OptimizeResult {
         let metricName = getMetricName(imageFormat: optimizationRequest.imageFormat)
-
-        let optimizationResult = try Metrics.global.withTimer(name: metricName) { () -> OptimizeResult in
+        let timer = Metrics.Timer(label: metricName)
+        let start = DispatchTime.now()
+        let result: OptimizeResult
+        do {
             switch optimizationRequest.imageFormat {
             case .jpg:
-                return try OptimizeService.optimizeJpeg(from: optimizationRequest)
+                result = try OptimizeService.optimizeJpeg(from: optimizationRequest)
             }
+        } catch {
+            timer.recordNanoseconds(Int64(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds))
+            throw error
         }
+        timer.recordNanoseconds(Int64(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds))
 
         logger.info(
             "Optimized \(optimizationRequest.imageFormat.rawValue.uppercased()) " +
-                "image from size: \(optimizationResult.beforeSize) " +
-                "to size: \(optimizationResult.afterSize), " +
-                "size reduction is: \(optimizationResult.ratio) % "
+                "image from size: \(result.beforeSize) " +
+                "to size: \(result.afterSize), " +
+                "size reduction is: \(result.ratio) % "
         )
-        return optimizationResult
+        return result
     }
 
     private func getMetricName(imageFormat: ImageFormat) -> String {
         let imageFormatMetricName = imageFormat.rawValue.replacingOccurrences(of: "/", with: "_")
-        let metricName = "optimize_\(imageFormatMetricName)_finished_time"
-        return metricName
+        return "optimize_\(imageFormatMetricName)_finished_time"
     }
 }

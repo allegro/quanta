@@ -1,22 +1,24 @@
 import XCTest
+import Vapor
+import XCTVapor
 
 @testable import Quanta
 
+final class HomeControllerTests: XCTestCase {
+    var app: Application!
 
-class HomeControllerTests: TestCase {
-    func testWelcome() throws {
-        let response = try app.sendRequest(at: "/")
-        XCTAssertEqual(response.http.status, .ok)
+    override func setUp() async throws {
+        app = try await Application.testable()
     }
-}
 
-// MARK: Manifest
+    override func tearDown() async throws {
+        try await app.asyncShutdown()
+        app = nil
+    }
 
-extension HomeControllerTests {
-    /// This is a requirement for XCTest on Linux
-    /// to function properly.
-    /// See ./Tests/LinuxMain.swift for examples
-    static let allTests = [
-        ("testWelcome", testWelcome),
-    ]
+    func testWelcome() async throws {
+        try await app.test(.GET, "/") { res async in
+            XCTAssertEqual(res.status, .ok)
+        }
+    }
 }

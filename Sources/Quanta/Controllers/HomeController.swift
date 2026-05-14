@@ -1,15 +1,15 @@
 import Vapor
 
-final class HomeController {
-    func index(_ req: Request) throws -> Future<View> {
-        return try req.view().render("welcome")
+final class HomeController: Sendable {
+    func index(_ req: Request) async throws -> View {
+        try await req.view.render("welcome")
     }
 }
 
 // MARK: - Routes
 
 extension HomeController: RouteCollection {
-    func boot(router: Router) throws {
-        router.get("/", use: self.index)
+    func boot(routes: any RoutesBuilder) throws {
+        routes.get("", use: self.index)
     }
 }
