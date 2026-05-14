@@ -25,14 +25,9 @@ public func optimizeWithMozJpeg(jpegData: Data, quality: UInt, chromaSubsampling
             // Treat both as optional to keep one source compatible with both platforms.
             let fromFileOpt: UnsafeMutablePointer<FILE>? = fmemopen(jpegDataPtr, jpegData.count, "r")
             let destFileOpt: UnsafeMutablePointer<FILE>? = open_memstream(&data, sizePointer)
-            guard let fromFile = fromFileOpt, let destFile = destFileOpt else {
-                if let f = fromFileOpt { fclose(f) }
-                if let f = destFileOpt { fclose(f) }
-                return
-            }
+            guard let fromFile = fromFileOpt, let destFile = destFileOpt else { return }
+            // compressCJPEG fcloses both files internally — do not close them here.
             compressCJPEG(Int32(quality), fromFile, destFile, chromaSubsampling.rawValue)
-            fclose(fromFile)
-            fclose(destFile)
             guard let dataPtr = data else { return }
             dataPtr.withMemoryRebound(to: UInt8.self, capacity: sizePointer.pointee) { pointer in
                 optimizedData = Data(bytes: pointer, count: sizePointer.pointee)
